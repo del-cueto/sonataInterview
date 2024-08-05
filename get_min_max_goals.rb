@@ -1,24 +1,43 @@
 #!/usr/bin/env ruby
 
-filename = './data/soccer.dat'
+if ARGV.length != 1
+  p "Usage: #{$0} <path_to_data_file>"
+  exit 1
+end
+
+filename = ARGV[0]
 
 min_difference = Float::INFINITY
 team_with_min_difference = nil
 
 # Define a block to process each line
 process_line = Proc.new do |line, index|
-  # Skip the header lines
-  next if index < 1
-
-  # Split the line into an array of columns and remove any extra spaces
   columns = line.strip.split(/\s+/)
+  if index == 2
+    # Map column names to their indices
+    team_index = columns.index { |col| col.match?(/Team/i) }
+    goals_for_index = columns.index { |col| col.match?(/^F$/i) }
+    goals_against_index = columns.index { |col| col.match?(/^A$/i) }
 
+    if team_index.nil? || goals_for_index.nil? || goals_against_index.nil?
+      puts "Error: Required columns not found in the header."
+      exit 1
+    end
+
+    @column_indices = {
+      team_name: team_index + 1,
+      goals_for: goals_for_index + 1,
+      goals_against: goals_against_index + 2
+    }
+    next
+  end
+
+  next if index < 3
   next unless columns.length >= 9
 
-  team_name = columns[1]
-  goals_for = columns[6].to_i
-  goals_against = columns[8].to_i
-
+  team_name = columns[@column_indices[:team_name]].gsub('_', ' ')
+  goals_for = columns[@column_indices[:goals_for]].to_i
+  goals_against = columns[@column_indices[:goals_against]].to_i
   # Absolute value to calculate the goal difference
   difference = (goals_for - goals_against).abs
 
@@ -36,3 +55,4 @@ end
 
 # Output the result
 puts "Team with the smallest goal difference: #{team_with_min_difference} with a goal difference of #{min_difference}"
+exit 0
